@@ -129,11 +129,11 @@ def test_payload_ids_differ_across_sources():
 
 # ── embed_texts ────────────────────────────────────────────────────────────────
 
-def _fake_embedding(dim: int = 3072) -> list[float]:
+def _fake_embedding(dim: int = 1536) -> list[float]:
     return [0.1] * dim
 
 
-def _mock_openai_response(texts: list[str], dim: int = 3072):
+def _mock_openai_response(texts: list[str], dim: int = 1536):
     response = MagicMock()
     response.data = [MagicMock(embedding=_fake_embedding(dim)) for _ in texts]
     return response
@@ -153,9 +153,9 @@ def test_embed_texts_vector_length_matches_dim():
     import data_loader
     texts = ["single sentence"]
     with patch.object(data_loader.client.embeddings, "create",
-                      return_value=_mock_openai_response(texts)):
+                      return_value=_mock_openai_response(texts, dim=data_loader.EMBED_DIM)):
         result = data_loader.embed_texts(texts)
-    assert len(result[0]) == 3072
+    assert len(result[0]) == data_loader.EMBED_DIM
 
 
 def test_embed_texts_passes_correct_model():

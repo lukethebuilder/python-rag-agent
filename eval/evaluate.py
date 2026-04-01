@@ -13,6 +13,8 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+from config import OPENAI_EMBEDDING_MODEL, EMBEDDING_DIMENSION
+
 SCORES_FILE = Path(__file__).parent / "scores.jsonl"
 
 
@@ -27,7 +29,7 @@ def evaluate_response(
     triple and append the scored result to eval/scores.jsonl.
 
     Returns the score dict (keys: faithfulness, answer_relevancy, question,
-    answer, source_filter, evaluated_at).
+    answer, source_filter, embedding_model, embedding_dimension, evaluated_at).
     """
     from ragas import evaluate
     from ragas.metrics import faithfulness, answer_relevancy
@@ -49,6 +51,8 @@ def evaluate_response(
         "question": question,
         "answer": answer,
         "source_filter": source_filter,
+        "embedding_model": OPENAI_EMBEDDING_MODEL,
+        "embedding_dimension": EMBEDDING_DIMENSION,
         "faithfulness": round(float(scores_df["faithfulness"].iloc[0]), 4)
             if "faithfulness" in scores_df.columns else None,
         "answer_relevancy": round(float(scores_df["answer_relevancy"].iloc[0]), 4)

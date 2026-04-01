@@ -1,12 +1,12 @@
-# Python RAG Agent
+# Python RAG Pipeline
 
-A production-ready Retrieval-Augmented Generation (RAG) agent built in Python. Upload PDFs, embed them into a vector database, and query them with natural language — powered by OpenAI and Qdrant.
+A production-ready Retrieval-Augmented Generation (RAG) pipeline built in Python. Upload PDFs, embed them into a vector database, and query them with natural language — powered by OpenAI and Qdrant.
 
 > Built by following along with [**How to Build a Production-Ready RAG AI Agent in Python (Step-by-Step)**](https://www.youtube.com/watch?v=AUQJ9eeP-Ls) with Claude assistance.
 
 ## Stack
 
-- **OpenAI** — embeddings (`text-embedding-3-large`) and answers (`gpt-4o-mini`)
+- **OpenAI** — embeddings (`text-embedding-3-small`) and answers (`gpt-4o-mini`)
 - **Qdrant** — local vector database
 - **Inngest** — durable, event-driven function execution
 - **FastAPI** — API server for Inngest functions
@@ -45,6 +45,9 @@ cp .env.example .env
 ```bash
 docker run -p 6333:6333 qdrant/qdrant
 ```
+
+If you change `OPENAI_EMBEDDING_MODEL` or `EMBEDDING_DIMENSION`, recreate your
+Qdrant collection and re-ingest documents so vector size stays in sync.
 
 ## Usage
 

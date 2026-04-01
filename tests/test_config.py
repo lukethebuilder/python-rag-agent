@@ -52,7 +52,7 @@ def test_default_qdrant_collection(monkeypatch):
 
 def test_default_embedding_model(monkeypatch):
     cfg = reload_config(monkeypatch)
-    assert cfg.OPENAI_EMBEDDING_MODEL == "text-embedding-3-large"
+    assert cfg.OPENAI_EMBEDDING_MODEL == "text-embedding-3-small"
 
 
 def test_default_chat_model(monkeypatch):
@@ -69,7 +69,7 @@ def test_default_system_prompt_contains_context(monkeypatch):
 
 def test_default_embedding_dimension(monkeypatch):
     cfg = reload_config(monkeypatch)
-    assert cfg.EMBEDDING_DIMENSION == 3072
+    assert cfg.EMBEDDING_DIMENSION == 1536
 
 
 def test_default_chunk_size(monkeypatch):
