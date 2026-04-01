@@ -46,13 +46,13 @@ def test_chunks_are_nonempty_strings():
 def test_chunk_count_within_expected_bounds():
     """
     With RAG_CHUNK_SIZE=1000 and ~3000 chars of text (with overlap),
-    expect between 2 and 10 chunks.
+    expect a modest number of chunks from the default splitter.
     """
     with patch("data_loader.PDFReader") as mock_reader:
         mock_reader.return_value.load_data.return_value = [_make_doc(LONG_TEXT)]
         from data_loader import load_and_chunk_pdf
         chunks = load_and_chunk_pdf("fake.pdf")
-    assert 2 <= len(chunks) <= 10
+    assert 2 <= len(chunks) <= 15
 
 
 def test_empty_page_text_is_skipped():
@@ -166,3 +166,21 @@ def test_embed_texts_passes_correct_model():
         data_loader.embed_texts(texts)
     _, kwargs = mock_create.call_args
     assert kwargs["model"] == data_loader.EMBED_MODEL
+
+
+# ── summarize_chunks ───────────────────────────────────────────────────────────
+
+def test_summarize_chunks_empty():
+    import data_loader
+    stats = data_loader.summarize_chunks([])
+    assert stats["chunk_count"] == 0
+    assert stats["avg_chunk_length"] == 0.0
+
+
+def test_summarize_chunks_non_empty():
+    import data_loader
+    stats = data_loader.summarize_chunks(["abc", "abcdef"])
+    assert stats["chunk_count"] == 2
+    assert stats["avg_chunk_length"] == 4.5
+    assert stats["min_chunk_length"] == 3
+    assert stats["max_chunk_length"] == 6

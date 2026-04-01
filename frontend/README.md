@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend (Next.js)
 
-## Getting Started
+This app is the web UI for the Python RAG backend in the parent project.
+It uploads PDFs to FastAPI, sends questions to the query route, and renders
+answers, sources, and retrieved contexts.
 
-First, run the development server:
+## Requirements
+
+- Node.js 20+
+- Backend API running at `http://localhost:8000`
+
+From the project root, run:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+uv run uvicorn main:app --reload
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Run Locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd frontend
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+- `NEXT_PUBLIC_API_URL` (required): FastAPI base URL, for example
+  `http://localhost:8000`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API Contract Used
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `POST /ingest` (multipart form-data with `file`)
+  - Response: `{ "ingested": number, "source_id": string }`
+- `POST /query` (JSON body)
+  - Request: `{ "question": string, "top_k"?: number, "source_filter"?: string | null }`
+  - Response: `{ "answer": string, "sources": string[], "contexts": string[] }`
 
-## Deploy on Vercel
+## Component Map
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `components/FileUploader.tsx` - drag/drop or click upload for PDFs
+- `components/QueryBox.tsx` - question input and submit
+- `components/AnswerCard.tsx` - answer text and sources list
+- `components/ContextDrawer.tsx` - expandable retrieved chunks
+- `app/page.tsx` - page composition and local UI state
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Troubleshooting
+
+- If upload/query fails, verify `NEXT_PUBLIC_API_URL` and that FastAPI is running.
+- If browser requests are blocked, check CORS settings in `main.py`.
+- Only `.pdf` files are accepted by both frontend and backend validators.

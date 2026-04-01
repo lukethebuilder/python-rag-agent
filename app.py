@@ -5,6 +5,7 @@ import streamlit as st
 
 from data_loader import load_and_chunk_pdf, embed_texts
 from vector_db import QdrantStorage
+from eval.chunk_stats import append_chunk_stats
 from config import (
     OPENAI_CHAT_MODEL,
     OPENAI_CHAT_MAX_TOKENS,
@@ -38,21 +39,30 @@ st.header("Ingest PDF")
 uploaded = st.file_uploader("Upload a PDF", type="pdf")
 
 if uploaded and st.button("Ingest"):
+    source_id = uploaded.name
     with st.spinner("Loading and chunking…"):
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp.write(uploaded.read())
             tmp_path = tmp.name
         chunks = load_and_chunk_pdf(tmp_path)
+        try:
+            chunk_stats = append_chunk_stats(source_id, chunks)
+        except Exception:
+            chunk_stats = None
 
     with st.spinner(f"Embedding {len(chunks)} chunks…"):
         vecs = embed_texts(chunks)
-        source_id = uploaded.name
         ids = [str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source_id}_{i}")) for i in range(len(chunks))]
         payloads = [{"source": source_id, "text": chunk} for chunk in chunks]
         QdrantStorage().upsert(ids, vecs, payloads)
 
     _get_sources.clear()
     st.success(f"Ingested {len(chunks)} chunks from **{uploaded.name}**")
+    if chunk_stats:
+        st.caption(
+            f"Chunk stats — count: {chunk_stats['chunk_count']}, "
+            f"avg length: {chunk_stats['avg_chunk_length']}"
+        )
 
 st.divider()
 

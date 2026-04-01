@@ -21,6 +21,7 @@ qdrant-storage/
 
 # Evaluation runtime output (contains real user queries — never commit)
 eval/scores.jsonl
+eval/chunk_stats.jsonl
 
 # Test artifacts
 test_doc.pdf

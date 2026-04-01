@@ -16,6 +16,7 @@ CONFIG_KEYS = [
     "OPENAI_EMBEDDING_MODEL",
     "RAG_CHUNK_SIZE",
     "RAG_CHUNK_OVERLAP",
+    "RAG_CHUNKING_STRATEGY",
     "OPENAI_CHAT_MODEL",
     "OPENAI_CHAT_MAX_TOKENS",
     "OPENAI_CHAT_TEMPERATURE",
@@ -63,6 +64,11 @@ def test_default_chat_model(monkeypatch):
 def test_default_system_prompt_contains_context(monkeypatch):
     cfg = reload_config(monkeypatch)
     assert "provided context" in cfg.RAG_SYSTEM_PROMPT
+
+
+def test_default_chunking_strategy(monkeypatch):
+    cfg = reload_config(monkeypatch)
+    assert cfg.RAG_CHUNKING_STRATEGY == "recursive_character_text_splitter"
 
 
 # ── Numeric defaults ───────────────────────────────────────────────────────────
@@ -128,6 +134,11 @@ def test_override_qdrant_url(monkeypatch):
 def test_override_chunk_size(monkeypatch):
     cfg = reload_config(monkeypatch, overrides={"RAG_CHUNK_SIZE": "512"})
     assert cfg.RAG_CHUNK_SIZE == 512
+
+
+def test_override_chunking_strategy(monkeypatch):
+    cfg = reload_config(monkeypatch, overrides={"RAG_CHUNKING_STRATEGY": "custom"})
+    assert cfg.RAG_CHUNKING_STRATEGY == "custom"
 
 
 def test_override_temperature(monkeypatch):

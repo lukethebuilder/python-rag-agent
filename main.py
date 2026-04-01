@@ -10,6 +10,7 @@ import os
 import datetime
 from data_loader import load_and_chunk_pdf, embed_texts
 from vector_db import QdrantStorage
+from eval.chunk_stats import append_chunk_stats
 from custom_types import RAGQuery, RAGSearchResult, RAGUpsertResult, RAGChunkAndSrc
 from config import (
     OPENAI_CHAT_MODEL,
@@ -55,6 +56,10 @@ async def ingest_pdf(ctx: inngest.Context):
     def _upsert(chunks_and_src: RAGChunkAndSrc) -> RAGUpsertResult:
         chunks = chunks_and_src.chunks
         source_id = chunks_and_src.source_id
+        try:
+            append_chunk_stats(source_id, chunks)
+        except Exception:
+            pass
         vecs = embed_texts(chunks)
         ids = [str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source_id}_{i}")) for i in range(len(chunks))]
         payloads = [{"source": source_id, "text": chunk} for chunk in chunks]
@@ -134,6 +139,10 @@ async def ingest_endpoint(file: UploadFile):
         tmp_path = tmp.name
     source_id = file.filename
     chunks = load_and_chunk_pdf(tmp_path)
+    try:
+        append_chunk_stats(source_id, chunks)
+    except Exception:
+        pass
     vecs = embed_texts(chunks)
     ids = [str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source_id}_{i}")) for i in range(len(chunks))]
     payloads = [{"source": source_id, "text": chunk} for chunk in chunks]
