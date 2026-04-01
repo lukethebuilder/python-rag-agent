@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What is the main topic of this document?",
+    "ground_truth": "The document covers the primary subject matter introduced in its opening sections."
+  },
+  {
+    "question": "What key concepts are introduced?",
+    "ground_truth": "The document introduces several foundational concepts relevant to its domain."
+  },
+  {
+    "question": "What conclusions does the document reach?",
+    "ground_truth": "The document summarises its findings and presents conclusions based on the evidence presented."
+  },
+  {
+    "question": "Who is the intended audience of this document?",
+    "ground_truth": "The document appears to be written for practitioners or researchers in the relevant field."
+  },
+  {
+    "question": "What methodology is described?",
+    "ground_truth": "The document describes a structured methodology for approaching the problem under discussion."
+  }
+]

@@ -19,6 +19,9 @@ qdrant-storage/
 # IDE
 .idea/
 
+# Evaluation runtime output (contains real user queries — never commit)
+eval/scores.jsonl
+
 # Test artifacts
 test_doc.pdf
 create_test_pdf.py

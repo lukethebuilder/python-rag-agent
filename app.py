@@ -1,3 +1,4 @@
+import os
 import tempfile
 import uuid
 import streamlit as st
@@ -89,8 +90,21 @@ if st.button("Ask") and question:
             )
             answer = res.choices[0].message.content.strip()
 
+            eval_scores = None
+            if os.getenv("RAG_EVAL_ENABLED", "false").lower() == "true":
+                try:
+                    from eval.evaluate import evaluate_response
+                    eval_scores = evaluate_response(question, answer, contexts, source_filter)
+                except Exception:
+                    pass
+
         st.subheader("Answer")
         st.write(answer)
+        if eval_scores:
+            st.caption(
+                f"RAGAS — faithfulness: {eval_scores.get('faithfulness')} | "
+                f"answer relevancy: {eval_scores.get('answer_relevancy')}"
+            )
 
         if sources:
             st.subheader("Sources")

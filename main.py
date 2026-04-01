@@ -79,6 +79,12 @@ async def query_pdf(ctx: inngest.Context):
             ]
         )
         answer = res.choices[0].message.content.strip()
+        if os.getenv("RAG_EVAL_ENABLED", "false").lower() == "true":
+            try:
+                from eval.evaluate import evaluate_response
+                evaluate_response(question, answer, found["contexts"])
+            except Exception:
+                pass
         return {"answer": answer, "sources": found["sources"], "num_contexts": len(found["contexts"])}
 
     question = ctx.event.data.get("question")
