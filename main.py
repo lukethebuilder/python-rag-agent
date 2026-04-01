@@ -1,6 +1,8 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
+from pydantic import BaseModel, Field
 import inngest
 import inngest.fast_api
 import uuid
@@ -16,6 +18,21 @@ from config import (
     RAG_SYSTEM_PROMPT,
     RAG_DEFAULT_TOP_K,
 )
+
+class QueryRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000)
+    top_k: int = Field(default=RAG_DEFAULT_TOP_K, ge=1, le=20)
+    source_filter: str | None = None
+
+class IngestResponse(BaseModel):
+    ingested: int
+    source_id: str
+
+class QueryResponse(BaseModel):
+    answer: str
+    sources: list[str]
+    contexts: list[str]
+
 
 inngest_client = inngest.Inngest(
     app_id="rag_app",
@@ -96,4 +113,62 @@ async def query_pdf(ctx: inngest.Context):
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 inngest.fast_api.serve(app, inngest_client, [ingest_pdf, query_pdf])  # correct function names
+
+
+@app.post("/ingest", response_model=IngestResponse)
+async def ingest_endpoint(file: UploadFile):
+    import tempfile
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+    source_id = file.filename
+    chunks = load_and_chunk_pdf(tmp_path)
+    vecs = embed_texts(chunks)
+    ids = [str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source_id}_{i}")) for i in range(len(chunks))]
+    payloads = [{"source": source_id, "text": chunk} for chunk in chunks]
+    QdrantStorage().upsert(ids, vecs, payloads)
+    return IngestResponse(ingested=len(chunks), source_id=source_id)
+
+
+@app.post("/query", response_model=QueryResponse)
+async def query_endpoint(req: QueryRequest):
+    query_vec = embed_texts([req.question])[0]
+    found = QdrantStorage().search(query_vec, req.top_k, source_filter=req.source_filter)
+    if not found["contexts"]:
+        return QueryResponse(answer="No relevant context found.", sources=[], contexts=[])
+    context_block = "\n\n".join(f"- {c}" for c in found["contexts"])
+    user_content = (
+        "Use the following context to answer the question:\n\n"
+        f"Context:\n{context_block}\n\n"
+        f"Question: {req.question}\n\n"
+        "Answer concisely using the context above."
+    )
+    client = OpenAI()
+    res = client.chat.completions.create(
+        model=OPENAI_CHAT_MODEL,
+        max_tokens=OPENAI_CHAT_MAX_TOKENS,
+        temperature=OPENAI_CHAT_TEMPERATURE,
+        messages=[
+            {"role": "system", "content": RAG_SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ],
+    )
+    answer = res.choices[0].message.content.strip()
+    if os.getenv("RAG_EVAL_ENABLED", "false").lower() == "true":
+        try:
+            from eval.evaluate import evaluate_response
+            evaluate_response(req.question, answer, found["contexts"], req.source_filter)
+        except Exception:
+            pass
+    return QueryResponse(answer=answer, sources=found["sources"], contexts=found["contexts"])
