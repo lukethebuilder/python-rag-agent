@@ -1,11 +1,12 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance, PointStruct  # modals → models
+from qdrant_client.models import VectorParams, Distance, PointStruct
+from config import QDRANT_URL, QDRANT_COLLECTION, EMBEDDING_DIMENSION
 
 class QdrantStorage:
-    def __init__(self, url="http://localhost:6333", collection="docs", dim=3072):
+    def __init__(self, url=QDRANT_URL, collection=QDRANT_COLLECTION, dim=EMBEDDING_DIMENSION):
         self.client = QdrantClient(url=url, timeout=30)
         self.collection = collection
-        if not self.client.collection_exists(self.collection):  # has_collection → collection_exists
+        if not self.client.collection_exists(self.collection):
             self.client.create_collection(
                 collection_name=self.collection,
                 vectors_config=VectorParams(size=dim, distance=Distance.COSINE)
@@ -23,7 +24,7 @@ class QdrantStorage:
             limit=top_k
         ).points
         contexts = []
-        sources = []                            # set() → list so .append works
+        sources = []
 
         for r in results:
             payload = getattr(r, 'payload', None) or {}

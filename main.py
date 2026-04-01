@@ -9,9 +9,13 @@ import datetime
 from data_loader import load_and_chunk_pdf, embed_texts
 from vector_db import QdrantStorage
 from custom_types import RAGQuery, RAGSearchResult, RAGUpsertResult, RAGChunkAndSrc
-from dotenv import load_dotenv
-
-load_dotenv()
+from config import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_CHAT_MAX_TOKENS,
+    OPENAI_CHAT_TEMPERATURE,
+    RAG_SYSTEM_PROMPT,
+    RAG_DEFAULT_TOP_K,
+)
 
 inngest_client = inngest.Inngest(
     app_id="rag_app",
@@ -51,7 +55,7 @@ async def ingest_pdf(ctx: inngest.Context):
 )
 async def query_pdf(ctx: inngest.Context):
 
-    def _search(question: str, top_k: int = 5) -> dict:
+    def _search(question: str, top_k: int = RAG_DEFAULT_TOP_K) -> dict:
         query_vec = embed_texts([question])[0]
         store = QdrantStorage()
         return store.search(query_vec, top_k)
@@ -66,11 +70,11 @@ async def query_pdf(ctx: inngest.Context):
         )
         client = OpenAI()
         res = client.chat.completions.create(
-            model="gpt-4o-mini",
-            max_tokens=1024,
-            temperature=0.2,
+            model=OPENAI_CHAT_MODEL,
+            max_tokens=OPENAI_CHAT_MAX_TOKENS,
+            temperature=OPENAI_CHAT_TEMPERATURE,
             messages=[
-                {"role": "system", "content": "You answer questions using only the provided context."},
+                {"role": "system", "content": RAG_SYSTEM_PROMPT},
                 {"role": "user", "content": user_content},
             ]
         )
@@ -78,7 +82,7 @@ async def query_pdf(ctx: inngest.Context):
         return {"answer": answer, "sources": found["sources"], "num_contexts": len(found["contexts"])}
 
     question = ctx.event.data.get("question")
-    top_k = int(ctx.event.data.get("top_k", 5))
+    top_k = int(ctx.event.data.get("top_k", RAG_DEFAULT_TOP_K))
 
     found = await ctx.step.run("embed-and-search", lambda: _search(question, top_k))
     return await ctx.step.run("llm-answer", lambda: _answer(found, question))

@@ -1,12 +1,16 @@
 import tempfile
 import uuid
 import streamlit as st
-from dotenv import load_dotenv
 
 from data_loader import load_and_chunk_pdf, embed_texts
 from vector_db import QdrantStorage
-
-load_dotenv()
+from config import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_CHAT_MAX_TOKENS,
+    OPENAI_CHAT_TEMPERATURE,
+    RAG_SYSTEM_PROMPT,
+    RAG_DEFAULT_TOP_K,
+)
 
 st.set_page_config(page_title="RAG Agent", layout="centered")
 st.title("RAG Agent")
@@ -39,7 +43,7 @@ question = st.text_input("Question", placeholder="What is this document about?")
 if st.button("Ask") and question:
     with st.spinner("Searching…"):
         query_vec = embed_texts([question])[0]
-        result = QdrantStorage().search(query_vec, 5)
+        result = QdrantStorage().search(query_vec, RAG_DEFAULT_TOP_K)
         contexts = result["contexts"]
         sources = result["sources"]
 
@@ -56,11 +60,11 @@ if st.button("Ask") and question:
                 "Answer concisely using the context above."
             )
             res = OpenAI().chat.completions.create(
-                model="gpt-4o-mini",
-                max_tokens=1024,
-                temperature=0.2,
+                model=OPENAI_CHAT_MODEL,
+                max_tokens=OPENAI_CHAT_MAX_TOKENS,
+                temperature=OPENAI_CHAT_TEMPERATURE,
                 messages=[
-                    {"role": "system", "content": "You answer questions using only the provided context."},
+                    {"role": "system", "content": RAG_SYSTEM_PROMPT},
                     {"role": "user", "content": user_content},
                 ],
             )
