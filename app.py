@@ -15,7 +15,24 @@ from config import (
 st.set_page_config(page_title="RAG Agent", layout="centered")
 st.title("RAG Agent")
 
-# ── Ingest ──────────────────────────────────────────────────────────────────
+# ── Sidebar: document selector ────────────────────────────────────────────────
+@st.cache_data(ttl=10)
+def _get_sources() -> list[str]:
+    return QdrantStorage().list_sources()
+
+with st.sidebar:
+    st.header("Documents")
+    sources = _get_sources()
+    if sources:
+        options = ["All documents"] + sources
+        selected = st.selectbox("Search within", options)
+        source_filter: str | None = None if selected == "All documents" else selected
+        st.caption(f"{len(sources)} document(s) ingested")
+    else:
+        st.info("No documents ingested yet.")
+        source_filter = None
+
+# ── Ingest ────────────────────────────────────────────────────────────────────
 st.header("Ingest PDF")
 uploaded = st.file_uploader("Upload a PDF", type="pdf")
 
@@ -33,17 +50,19 @@ if uploaded and st.button("Ingest"):
         payloads = [{"source": source_id, "text": chunk} for chunk in chunks]
         QdrantStorage().upsert(ids, vecs, payloads)
 
+    _get_sources.clear()
     st.success(f"Ingested {len(chunks)} chunks from **{uploaded.name}**")
 
 st.divider()
 
-# ── Query ────────────────────────────────────────────────────────────────────
+# ── Query ─────────────────────────────────────────────────────────────────────
 st.header("Ask a Question")
 question = st.text_input("Question", placeholder="What is this document about?")
 if st.button("Ask") and question:
-    with st.spinner("Searching…"):
+    scope_label = f"**{source_filter}**" if source_filter else "all documents"
+    with st.spinner(f"Searching {scope_label}…"):
         query_vec = embed_texts([question])[0]
-        result = QdrantStorage().search(query_vec, RAG_DEFAULT_TOP_K)
+        result = QdrantStorage().search(query_vec, RAG_DEFAULT_TOP_K, source_filter=source_filter)
         contexts = result["contexts"]
         sources = result["sources"]
 
